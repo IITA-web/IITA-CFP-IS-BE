@@ -13,12 +13,26 @@ from dotenv import load_dotenv
 from fastapi import Body
 from pydantic import BaseModel, Field
 
-ROOT = Path(__file__).resolve().parents[2]
-load_dotenv(ROOT / 'backend' / '.env')
+ROOT = Path(__file__).resolve().parents[1]
+load_dotenv(ROOT / '.env')
 ADMIN_TOKEN = os.getenv('IITA_CFP_ADMIN_TOKEN', '').strip()
 admin_bearer = HTTPBearer(auto_error=False)
-DB_PATH = Path(os.getenv('IITA_CFP_DATABASE', str(ROOT / 'backend' / 'iita_cfp_app.db')))
-DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+DATA_DIR = Path(os.getenv('IITA_CFP_DATA_DIR', str(ROOT)))
+if not DATA_DIR.is_absolute():
+    DATA_DIR = ROOT / DATA_DIR
+DATA_DIR.mkdir(parents=True, exist_ok=True)
+
+
+def data_file(env_name: str, default_name: str) -> Path:
+    configured = os.getenv(env_name, '').strip()
+    path = Path(configured) if configured else DATA_DIR / default_name
+    if not path.is_absolute():
+        path = DATA_DIR / path
+    path.parent.mkdir(parents=True, exist_ok=True)
+    return path
+
+
+DB_PATH = data_file('IITA_CFP_DATABASE', 'iita_cfp_app.db')
 STATUSES = ('new', 'reviewing', 'submitted', 'won')
 scan_state = {'id': None, 'status': 'idle', 'message': 'No scan has run yet', 'started_at': None, 'finished_at': None, 'new_count': 0}
 scan_lock = threading.Lock()
@@ -108,7 +122,7 @@ def serialize(row):
     item['consortium'] = None if item['consortium'] is None else bool(item['consortium'])
     return item
 
-SCRAPER_CONFIG_PATH = ROOT / 'backend' / 'scraper_config.json'
+SCRAPER_CONFIG_PATH = data_file('IITA_CFP_SCRAPER_CONFIG', 'scraper_config.json')
 
 
 def read_runtime_config():
@@ -127,7 +141,7 @@ def write_runtime_config(config):
 def load_scraper():
     sys.path.insert(0, str(ROOT))
     import iita_cfp_scraper as scraper
-    scraper.DB_PATH = str(ROOT / 'backend' / 'iita_cfp_seen.db')
+    scraper.DB_PATH = str(data_file('IITA_CFP_SEEN_DATABASE', 'iita_cfp_seen.db'))
     config = read_runtime_config()
     settings = config.get('settings', {})
     setting_map = {'RELEVANCE_THRESHOLD': 'relevance_threshold', 'HIGH_PRIORITY_THRESHOLD': 'high_priority_threshold', 'CRAWL_DELAY_SECONDS': 'crawl_delay_seconds', 'ROBOTS_CACHE_TTL': 'robots_cache_ttl_seconds', 'REQUEST_TIMEOUT': 'request_timeout_seconds', 'EMAIL_MODE': 'email_mode'}
