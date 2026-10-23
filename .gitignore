@@ -1,0 +1,27 @@
+﻿# Python virtual environments
+.venv/
+venv/
+env/
+
+# Python cache and compiled files
+__pycache__/
+**/__pycache__/
+*.py[cod]
+*$py.class
+
+# Local environment files (keep the example)
+.env
+.env.*
+!.env.example
+
+# Local databases and runtime scraper settings
+*.db
+*.sqlite
+*.sqlite3
+scraper_config.json
+
+# Logs and tooling caches
+*.log
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
